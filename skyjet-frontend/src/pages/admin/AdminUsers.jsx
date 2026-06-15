@@ -1,0 +1,203 @@
+import { useState, useEffect } from 'react';
+import { adminApi } from '../../api/admin';
+import Avatar from '../../components/common/Avatar';
+import Pagination from '../../components/common/Pagination';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import Modal from '../../components/common/Modal';
+import toast from 'react-hot-toast';
+import { formatDistanceToNow } from 'date-fns';
+import { Search, ShieldCheck, ShieldOff, UserCheck, UserX, Bell } from 'lucide-react';
+
+export default function AdminUsers() {
+  const [users, setUsers] = useState([]);
+  const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [notifModal, setNotifModal] = useState(false);
+  const [notifForm, setNotifForm] = useState({ title: '', message: '' });
+  const [notifLoading, setNotifLoading] = useState(false);
+
+  useEffect(() => { load(); }, [page, search]);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const params = { page };
+      if (search) params.search = search;
+      const res = await adminApi.allUsers(params);
+      const d = res.data.data;
+      setUsers(d.items || []);
+      setPagination({ current_page: d.current_page, last_page: d.last_page, total: d.total });
+    } catch {}
+    finally { setLoading(false); }
+  };
+
+  const handleToggleActive = async (id) => {
+    try {
+      await adminApi.toggleUser(id);
+      toast.success('User status updated');
+      load();
+    } catch { toast.error('Failed'); }
+  };
+
+  const handleToggleAdmin = async (id) => {
+    try {
+      await adminApi.toggleAdmin(id);
+      toast.success('Admin role toggled');
+      load();
+    } catch { toast.error('Failed'); }
+  };
+
+  const handleSendNotif = async () => {
+    if (!notifForm.message.trim()) { toast.error('Message required'); return; }
+    setNotifLoading(true);
+    try {
+      await adminApi.sendNotification(notifForm);
+      toast.success('Notification sent to all users!');
+      setNotifModal(false);
+      setNotifForm({ title: '', message: '' });
+    } catch { toast.error('Failed to send'); }
+    finally { setNotifLoading(false); }
+  };
+
+  return (
+    <div>
+      <div className="page-header">
+        <div className="page-header-row">
+          <div>
+            <h1 className="page-title">Manage Users</h1>
+            <p className="page-subtitle">{pagination.total} registered users</p>
+          </div>
+          <button className="btn btn-primary" onClick={() => setNotifModal(true)}>
+            <Bell size={14} /> Notify All
+          </button>
+        </div>
+      </div>
+
+      <div className="filter-bar mb-3">
+        <div className="filter-search-wrap">
+          <Search className="filter-search-icon" />
+          <input
+            className="filter-search-input"
+            placeholder="Search users…"
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
+          />
+        </div>
+      </div>
+
+      {loading ? (
+        <LoadingSpinner />
+      ) : (
+        <div className="table-container">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th style={{ width: 100 }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u => (
+                <tr key={u.id}>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <Avatar user={u} size="sm" />
+                      <span className="font-medium" style={{ fontSize: 13 }}>{u.name}</span>
+                    </div>
+                  </td>
+                  <td className="text-muted text-sm">@{u.username}</td>
+                  <td className="text-muted text-sm">{u.email}</td>
+                  <td>
+                    {u.is_admin
+                      ? <span className="badge" style={{ background: '#EFF6FF', color: '#2563EB' }}>Admin</span>
+                      : <span className="badge" style={{ background: 'var(--surface-2)', color: 'var(--text-muted)' }}>User</span>
+                    }
+                  </td>
+                  <td>
+                    {u.is_active
+                      ? <span className="badge badge-completed">Active</span>
+                      : <span className="badge badge-closed">Suspended</span>
+                    }
+                  </td>
+                  <td className="text-muted text-sm">
+                    {formatDistanceToNow(new Date(u.created_at), { addSuffix: true })}
+                  </td>
+                  <td>
+                    <div className="table-action-btns">
+                      <button
+                        className="btn btn-ghost btn-sm btn-icon"
+                        title={u.is_active ? 'Suspend' : 'Activate'}
+                        onClick={() => handleToggleActive(u.id)}
+                      >
+                        {u.is_active ? <UserX size={13} /> : <UserCheck size={13} />}
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm btn-icon"
+                        title={u.is_admin ? 'Remove Admin' : 'Make Admin'}
+                        onClick={() => handleToggleAdmin(u.id)}
+                      >
+                        {u.is_admin ? <ShieldOff size={13} /> : <ShieldCheck size={13} />}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)', fontSize: 13 }}>
+                    No users found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <Pagination currentPage={pagination.current_page} lastPage={pagination.last_page} onPageChange={setPage} />
+
+      {/* Broadcast Notification Modal */}
+      <Modal
+        open={notifModal}
+        onClose={() => setNotifModal(false)}
+        title="Notify All Users"
+        subtitle="Send a broadcast notification to every registered user."
+        footer={
+          <>
+            <button className="btn btn-secondary" onClick={() => setNotifModal(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleSendNotif} disabled={notifLoading}>
+              {notifLoading ? 'Sending…' : 'Send Notification'}
+            </button>
+          </>
+        }
+      >
+        <div className="form-group">
+          <label className="form-label">Title</label>
+          <input
+            className="form-input"
+            placeholder="Notification title"
+            value={notifForm.title}
+            onChange={e => setNotifForm(f => ({ ...f, title: e.target.value }))}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Message <span className="required">*</span></label>
+          <textarea
+            className="form-textarea"
+            rows={3}
+            placeholder="Write your message…"
+            value={notifForm.message}
+            onChange={e => setNotifForm(f => ({ ...f, message: e.target.value }))}
+          />
+        </div>
+      </Modal>
+    </div>
+  );
+}
