@@ -8,7 +8,7 @@ import { authApi } from '../../api/auth';
 const logoSrc = '/images/logo.png';
 
 export default function Register() {
-  const { register } = useAuth();
+  const { register, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     name: '', username: '', email: '', password: '', password_confirmation: '',
@@ -55,6 +55,7 @@ export default function Register() {
         const fd = new FormData();
         fd.append('avatar', avatarFile);
         await authApi.uploadAvatar(fd);
+        await refreshUser();
       }
       toast.success(`Welcome, ${user.name}!`);
       navigate('/');

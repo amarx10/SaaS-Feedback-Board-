@@ -23,13 +23,14 @@ export default function AdminFeedback() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [pinnedFilter, setPinnedFilter] = useState('');
   const [page, setPage] = useState(1);
   const [statusModal, setStatusModal] = useState(null); // { id, current }
   const [statusForm, setStatusForm] = useState({ status: '', admin_response: '' });
   const [deleteModal, setDeleteModal] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => { load(); }, [page, search, statusFilter]);
+  useEffect(() => { load(); }, [page, search, statusFilter, pinnedFilter]);
 
   const load = async () => {
     setLoading(true);
@@ -37,6 +38,7 @@ export default function AdminFeedback() {
       const params = { page };
       if (search) params.search = search;
       if (statusFilter) params.status = statusFilter;
+      if (pinnedFilter) params.pinned = 1;
       const res = await adminApi.allFeedback(params);
       const d = res.data.data;
       setFeedback(d.items || []);
@@ -113,6 +115,14 @@ export default function AdminFeedback() {
           {STATUS_OPTIONS.map(s => (
             <option key={s} value={s}>{formatStatusLabel(s)}</option>
           ))}
+        </select>
+        <select
+          className="filter-select"
+          value={pinnedFilter}
+          onChange={e => { setPinnedFilter(e.target.value); setPage(1); }}
+        >
+          <option value="">All Feedback</option>
+          <option value="pinned">Pinned only</option>
         </select>
       </div>
 

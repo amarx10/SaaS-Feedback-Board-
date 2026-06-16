@@ -56,6 +56,9 @@ class AdminController extends Controller
         if ($request->filled('search')) {
             $query->where('title', 'like', "%{$request->search}%");
         }
+        if ($request->filled('pinned')) {
+            $query->where('is_pinned', true);
+        }
         $feedback = $query->orderBy('created_at', 'desc')->paginate(20);
         return response()->json([
             'success' => true,
