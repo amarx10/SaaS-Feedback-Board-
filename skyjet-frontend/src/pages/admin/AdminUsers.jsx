@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { adminApi } from '../../api/admin';
+import { useAuth } from '../../context/AuthContext';
 import Avatar from '../../components/common/Avatar';
 import Pagination from '../../components/common/Pagination';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -9,6 +10,12 @@ import { formatDistanceToNow } from 'date-fns';
 import { Search, ShieldCheck, ShieldOff, UserCheck, UserX, Bell } from 'lucide-react';
 
 export default function AdminUsers() {
+  const { user } = useAuth();
+  const currentIsSuperAdmin = Boolean(
+    user?.is_super_admin ||
+    user?.username?.toLowerCase() === 'amar' ||
+    user?.email?.toLowerCase() === 'amar@gmail.com'
+  );
   const [users, setUsers] = useState([]);
   const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -33,30 +40,39 @@ export default function AdminUsers() {
     finally { setLoading(false); }
   };
 
-  const handleToggleActive = async (user) => {
-    const message = user.is_active
-      ? `Are you sure you want to suspend ${user.name}?`
-      : `Are you sure you want to activate ${user.name}?`;
+  const handleToggleActive = async (userItem) => {
+    const message = userItem.is_active
+      ? `Are you sure you want to suspend ${userItem.name}?`
+      : `Are you sure you want to activate ${userItem.name}?`;
     if (!window.confirm(message)) return;
 
     try {
-      await adminApi.toggleUser(user.id);
-      toast.success(user.is_active ? 'User suspended' : 'User activated');
+      await adminApi.toggleUser(userItem.id);
+      toast.success(userItem.is_active ? 'User suspended' : 'User activated');
       load();
-    } catch { toast.error('Failed'); }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Failed');
+    }
   };
 
-  const handleToggleAdmin = async (user) => {
-    const message = user.is_admin
-      ? `Are you sure you want to remove admin access from ${user.name}?`
-      : `Are you sure you want to make ${user.name} an admin?`;
-    if (!window.confirm(message)) return;
+  const handleToggleAdmin = async (userItem) => {
+    if (!currentIsSuperAdmin) {
+      toast.error('Only the super admin can change admin privileges.');
+      return;
+    }
+
+    if (!window.confirm(userItem.is_admin
+      ? `Are you sure you want to remove admin access from ${userItem.name}?`
+      : `Are you sure you want to make ${userItem.name} an admin?`
+    )) return;
 
     try {
-      await adminApi.toggleAdmin(user.id);
-      toast.success(user.is_admin ? 'Admin access removed' : 'Admin access granted');
+      await adminApi.toggleAdmin(userItem.id);
+      toast.success(userItem.is_admin ? 'Admin access removed' : 'Admin access granted');
       load();
-    } catch { toast.error('Failed'); }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Failed');
+    }
   };
 
   const handleSendNotif = async () => {
@@ -125,10 +141,13 @@ export default function AdminUsers() {
                   <td className="text-muted text-sm">@{u.username}</td>
                   <td className="text-muted text-sm">{u.email}</td>
                   <td>
-                    {u.is_admin
-                      ? <span className="badge" style={{ background: '#EFF6FF', color: '#2563EB' }}>Admin</span>
-                      : <span className="badge" style={{ background: 'var(--surface-2)', color: 'var(--text-muted)' }}>User</span>
-                    }
+                    {u.is_super_admin ? (
+                      <span className="badge" style={{ background: '#FEF3C7', color: '#B45309' }}>Super Admin</span>
+                    ) : u.is_admin ? (
+                      <span className="badge" style={{ background: '#EFF6FF', color: '#2563EB' }}>Admin</span>
+                    ) : (
+                      <span className="badge" style={{ background: 'var(--surface-2)', color: 'var(--text-muted)' }}>User</span>
+                    )}
                   </td>
                   <td>
                     {u.is_active
@@ -145,6 +164,7 @@ export default function AdminUsers() {
                         className="btn btn-ghost btn-sm btn-icon"
                         title={u.is_active ? 'Suspend' : 'Activate'}
                         onClick={() => handleToggleActive(u)}
+                        disabled={u.is_super_admin}
                       >
                         {u.is_active ? <UserX size={13} /> : <UserCheck size={13} />}
                       </button>
@@ -152,6 +172,7 @@ export default function AdminUsers() {
                         className="btn btn-ghost btn-sm btn-icon"
                         title={u.is_admin ? 'Remove Admin' : 'Make Admin'}
                         onClick={() => handleToggleAdmin(u)}
+                        disabled={!currentIsSuperAdmin || u.is_super_admin}
                       >
                         {u.is_admin ? <ShieldOff size={13} /> : <ShieldCheck size={13} />}
                       </button>

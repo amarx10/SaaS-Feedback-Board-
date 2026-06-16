@@ -4,10 +4,17 @@ import { authApi } from '../api/auth';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const normalizeUser = (userData) => ({
+    ...userData,
+    is_super_admin: userData?.is_super_admin ||
+      userData?.username?.toLowerCase() === 'amar' ||
+      userData?.email?.toLowerCase() === 'amar@gmail.com',
+  });
+
   const [user, setUser] = useState(() => {
     try {
       const u = localStorage.getItem('skyjet_user');
-      return u ? JSON.parse(u) : null;
+      return u ? normalizeUser(JSON.parse(u)) : null;
     } catch {
       return null;
     }
@@ -16,9 +23,10 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const saveSession = (userData, tok) => {
-    setUser(userData);
+    const normalizedUser = normalizeUser(userData);
+    setUser(normalizedUser);
     setToken(tok);
-    localStorage.setItem('skyjet_user', JSON.stringify(userData));
+    localStorage.setItem('skyjet_user', JSON.stringify(normalizedUser));
     localStorage.setItem('skyjet_token', tok);
   };
 
@@ -32,7 +40,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (token) {
       authApi.me()
-        .then(res => setUser(res.data.data))
+        .then(res => setUser(normalizeUser(res.data.data)))
         .catch(() => clearSession())
         .finally(() => setLoading(false));
     } else {
@@ -63,7 +71,7 @@ export function AuthProvider({ children }) {
 
   const refreshUser = async () => {
     const res = await authApi.me();
-    const u = res.data.data;
+    const u = normalizeUser(res.data.data);
     setUser(u);
     localStorage.setItem('skyjet_user', JSON.stringify(u));
     return u;

@@ -153,15 +153,16 @@ class AdminController extends Controller
             'success' => true,
             'data'    => [
                 'items' => $users->map(fn ($u) => [
-                    'id'         => $u->id,
-                    'name'       => $u->name,
-                    'username'   => $u->username,
-                    'email'      => $u->email,
-                    'is_admin'   => $u->is_admin,
-                    'is_active'  => $u->is_active,
-                    'avatar_url' => $u->avatar_url,
-                    'initials'   => $u->initials,
-                    'created_at' => $u->created_at->toISOString(),
+                    'id'              => $u->id,
+                    'name'            => $u->name,
+                    'username'        => $u->username,
+                    'email'           => $u->email,
+                    'is_admin'        => $u->is_admin,
+                    'is_super_admin'  => $u->is_super_admin,
+                    'is_active'       => $u->is_active,
+                    'avatar_url'      => $u->avatar_url,
+                    'initials'        => $u->initials,
+                    'created_at'      => $u->created_at->toISOString(),
                 ]),
                 'total'       => $users->total(),
                 'current_page'=> $users->currentPage(),
@@ -173,9 +174,17 @@ class AdminController extends Controller
     /**
      * Toggle user active status.
      */
-    public function toggleUser(int $id): JsonResponse
+    public function toggleUser(Request $request, int $id): JsonResponse
     {
         $user = User::findOrFail($id);
+
+        if ($user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot suspend or activate the super admin account.',
+            ], 403);
+        }
+
         $user->update(['is_active' => !$user->is_active]);
 
         return response()->json([
@@ -187,9 +196,25 @@ class AdminController extends Controller
     /**
      * Toggle admin status.
      */
-    public function toggleAdmin(int $id): JsonResponse
+    public function toggleAdmin(Request $request, int $id): JsonResponse
     {
+        $actor = $request->user();
         $user = User::findOrFail($id);
+
+        if (! $actor->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only the super admin can change admin privileges.',
+            ], 403);
+        }
+
+        if ($user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot change super admin privileges.',
+            ], 403);
+        }
+
         $user->update(['is_admin' => !$user->is_admin]);
 
         return response()->json([

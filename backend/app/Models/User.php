@@ -36,6 +36,10 @@ class User extends Authenticatable
         'date_of_birth'     => 'date',
     ];
 
+    protected $appends = [
+        'is_super_admin',
+    ];
+
     // Relationships
     public function feedback()
     {
@@ -99,5 +103,15 @@ class User extends Authenticatable
             $initials .= strtoupper(substr($word, 0, 1));
         }
         return $initials;
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return strtolower($this->username) === 'amar' || strtolower($this->email) === 'amar@gmail.com';
+    }
+
+    public function getIsSuperAdminAttribute(): bool
+    {
+        return $this->isSuperAdmin();
     }
 }
