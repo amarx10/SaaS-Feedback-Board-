@@ -20,6 +20,13 @@ export default function Register() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
+  const today = new Date();
+  const maxDob = new Date(today);
+  maxDob.setFullYear(maxDob.getFullYear() - 16);
+  const minDob = new Date(today);
+  minDob.setFullYear(minDob.getFullYear() - 100);
+  const formatDateInput = (date) => date.toISOString().slice(0, 10);
+
   const handleChange = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));
     setErrors(e => ({ ...e, [k]: undefined }));
@@ -40,6 +47,26 @@ export default function Register() {
     if (!form.password) e.password = 'Password is required';
     if (form.password.length < 8) e.password = 'Min 8 characters';
     if (form.password !== form.password_confirmation) e.password_confirmation = 'Passwords do not match';
+
+    if (form.date_of_birth) {
+      const dob = new Date(form.date_of_birth);
+      const today = new Date();
+      if (isNaN(dob.getTime())) {
+        e.date_of_birth = 'Please enter a valid date of birth';
+      } else {
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+          age -= 1;
+        }
+        if (age < 16) {
+          e.date_of_birth = 'You must be at least 16 years old';
+        } else if (age > 100) {
+          e.date_of_birth = 'Date of birth must be within the last 100 years';
+        }
+      }
+    }
+
     return e;
   };
 
@@ -157,7 +184,14 @@ export default function Register() {
 
             <div className="form-group">
               <label className="form-label">Date of Birth</label>
-              <input className="form-input" type="date" value={form.date_of_birth} onChange={e => handleChange('date_of_birth', e.target.value)} />
+              <input
+                className="form-input"
+                type="date"
+                min={formatDateInput(minDob)}
+                max={formatDateInput(maxDob)}
+                value={form.date_of_birth}
+                onChange={e => handleChange('date_of_birth', e.target.value)}
+              />
               {errors.date_of_birth && <p className="form-error">{errors.date_of_birth}</p>}
             </div>
 

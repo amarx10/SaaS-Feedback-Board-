@@ -157,11 +157,14 @@ export default function FeedbackDetail() {
   };
 
   const handleDeleteComment = async (commentId) => {
+    if (!window.confirm('Are you sure you want to delete this comment? This action cannot be undone.')) return;
+
     try {
       await commentsApi.remove(commentId);
       setComments(cs => removeCommentFromTree(cs, commentId));
       setReplyParentId(prev => (prev === commentId ? null : prev));
       setFeedback(f => ({ ...f, comments_count: f.comments_count - 1 }));
+      toast.success('Comment deleted');
     } catch { toast.error('Failed'); }
   };
 

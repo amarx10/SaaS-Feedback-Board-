@@ -21,6 +21,13 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  const today = new Date();
+  const maxDob = new Date(today);
+  maxDob.setFullYear(maxDob.getFullYear() - 16);
+  const minDob = new Date(today);
+  minDob.setFullYear(minDob.getFullYear() - 100);
+  const formatDateInput = (date) => date.toISOString().slice(0, 10);
+
   useEffect(() => {
     if (user) {
       setForm({
@@ -59,7 +66,36 @@ export default function Profile() {
     setAvatarPreview(URL.createObjectURL(file));
   };
 
+  const getAge = (dateString) => {
+    const dob = new Date(dateString);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+      age -= 1;
+    }
+    return age;
+  };
+
   const handleSave = async () => {
+    if (form.date_of_birth) {
+      const dob = new Date(form.date_of_birth);
+      if (isNaN(dob.getTime())) {
+        setErrors({ date_of_birth: 'Please enter a valid date of birth.' });
+        return;
+      }
+
+      const age = getAge(form.date_of_birth);
+      if (age < 16) {
+        setErrors({ date_of_birth: 'You must be at least 16 years old.' });
+        return;
+      }
+      if (age > 100) {
+        setErrors({ date_of_birth: 'Date of birth must be within the last 100 years.' });
+        return;
+      }
+    }
+
     setLoading(true);
     setErrors({});
     try {
@@ -173,9 +209,12 @@ export default function Profile() {
               <input
                 className="form-input"
                 type="date"
+                min={formatDateInput(minDob)}
+                max={formatDateInput(maxDob)}
                 value={form.date_of_birth}
                 onChange={e => handleChange('date_of_birth', e.target.value)}
               />
+              {errors.date_of_birth && <p className="form-error">{errors.date_of_birth}</p>}
             </div>
 
             <div className="form-group">

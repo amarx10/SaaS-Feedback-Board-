@@ -15,8 +15,17 @@ class AuthController extends Controller
             'username'         => 'required|string|max:50|unique:users|alpha_dash',
             'email'            => 'required|email|unique:users',
             'password'         => 'required|string|min:8|confirmed',
-            'date_of_birth'    => 'nullable|date|before:today',
-            'bio'              => 'nullable|string|max:500',]);
+            'date_of_birth'    => [
+                'nullable',
+                'date',
+                'before_or_equal:' . now()->subYears(16)->format('Y-m-d'),
+                'after_or_equal:' . now()->subYears(100)->format('Y-m-d'),
+            ],
+            'bio'              => 'nullable|string|max:500',
+        ], [
+            'date_of_birth.before_or_equal' => 'You must be at least 16 years old.',
+            'date_of_birth.after_or_equal'  => 'Date of birth must be within the last 100 years.',
+        ]);
         $user = User::create([
             'name'          => $validated['name'],
             'username'      => $validated['username'],

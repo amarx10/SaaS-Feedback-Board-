@@ -33,18 +33,28 @@ export default function AdminUsers() {
     finally { setLoading(false); }
   };
 
-  const handleToggleActive = async (id) => {
+  const handleToggleActive = async (user) => {
+    const message = user.is_active
+      ? `Are you sure you want to suspend ${user.name}?`
+      : `Are you sure you want to activate ${user.name}?`;
+    if (!window.confirm(message)) return;
+
     try {
-      await adminApi.toggleUser(id);
-      toast.success('User status updated');
+      await adminApi.toggleUser(user.id);
+      toast.success(user.is_active ? 'User suspended' : 'User activated');
       load();
     } catch { toast.error('Failed'); }
   };
 
-  const handleToggleAdmin = async (id) => {
+  const handleToggleAdmin = async (user) => {
+    const message = user.is_admin
+      ? `Are you sure you want to remove admin access from ${user.name}?`
+      : `Are you sure you want to make ${user.name} an admin?`;
+    if (!window.confirm(message)) return;
+
     try {
-      await adminApi.toggleAdmin(id);
-      toast.success('Admin role toggled');
+      await adminApi.toggleAdmin(user.id);
+      toast.success(user.is_admin ? 'Admin access removed' : 'Admin access granted');
       load();
     } catch { toast.error('Failed'); }
   };
@@ -134,14 +144,14 @@ export default function AdminUsers() {
                       <button
                         className="btn btn-ghost btn-sm btn-icon"
                         title={u.is_active ? 'Suspend' : 'Activate'}
-                        onClick={() => handleToggleActive(u.id)}
+                        onClick={() => handleToggleActive(u)}
                       >
                         {u.is_active ? <UserX size={13} /> : <UserCheck size={13} />}
                       </button>
                       <button
                         className="btn btn-ghost btn-sm btn-icon"
                         title={u.is_admin ? 'Remove Admin' : 'Make Admin'}
-                        onClick={() => handleToggleAdmin(u.id)}
+                        onClick={() => handleToggleAdmin(u)}
                       >
                         {u.is_admin ? <ShieldOff size={13} /> : <ShieldCheck size={13} />}
                       </button>
