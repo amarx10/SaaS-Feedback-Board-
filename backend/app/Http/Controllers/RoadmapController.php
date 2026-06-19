@@ -9,7 +9,7 @@ class RoadmapController extends Controller
 {
     public function index(): JsonResponse
     {
-        $statuses = ['under_review', 'planned', 'in_progress', 'completed'];
+        $statuses = ['open', 'under_review', 'planned', 'in_progress', 'completed'];
 
         // Single query instead of 4 separate per-status queries
         $allItems = Feedback::with(['user', 'category'])

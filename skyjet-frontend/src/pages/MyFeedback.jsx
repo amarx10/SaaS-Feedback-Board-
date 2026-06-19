@@ -51,6 +51,14 @@ export default function MyFeedback() {
     );
   };
 
+  const handleCreateSuccess = () => {
+    if (page !== 1) {
+      setPage(1);
+    } else {
+      load();
+    }
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -109,7 +117,7 @@ export default function MyFeedback() {
       <FeedbackForm
         open={showForm}
         onClose={() => setShowForm(false)}
-        onSuccess={load}
+        onSuccess={handleCreateSuccess}
         existing={null}
       />
     </div>

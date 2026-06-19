@@ -21,8 +21,13 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const message = error.response?.data?.message || '';
 
+    if (
+      status === 401 ||
+      (status === 403 && message.toLowerCase().includes('deactivated'))
+    ) {
       localStorage.removeItem('skyjet_token');
       localStorage.removeItem('skyjet_user');
 

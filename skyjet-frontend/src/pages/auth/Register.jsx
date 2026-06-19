@@ -80,10 +80,15 @@ export default function Register() {
   const user = await register(form);
 
   if (avatarFile) {
-    const fd = new FormData();
-    fd.append('avatar', avatarFile);
-    await authApi.uploadAvatar(fd);
+    try {
+      const fd = new FormData();
+      fd.append('avatar', avatarFile);
+      await authApi.uploadAvatar(fd);
+    } catch {
+      toast.error('Account created, but avatar upload failed. You can add one from your profile.');
+    }
   }
+
   await refreshUser();
   toast.success(`Welcome, ${user.name}!`);
   navigate('/');

@@ -16,18 +16,37 @@ export default function Header({ onSearch, onMenu }) {
   const [userOpen, setUserOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
+  const [notifPage, setNotifPage] = useState(1);
+  const [notifLastPage, setNotifLastPage] = useState(1);
+  const [notifLoading, setNotifLoading] = useState(false);
   const notifRef = useRef(null);
   const userRef = useRef(null);
 
+  const loadNotifications = async (page = 1, append = false) => {
+    setNotifLoading(true);
+    try {
+      const r = await notificationsApi.getAll({ page });
+      const notifs = r.data.data || [];
+      const total = r.data.total || notifs.length;
+      const perPage = 20;
+
+      setNotifications(prev => append ? [...prev, ...notifs] : notifs);
+      setUnread(r.data.unread_count ?? 0);
+      setNotifPage(page);
+      setNotifLastPage(Math.max(1, Math.ceil(total / perPage)));
+    } catch {
+      // Keep existing notifications on refresh failure
+    } finally {
+      setNotifLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (user) {
-      notificationsApi.getAll()
-        .then(r => {
-          const notifs = r.data.data || [];
-          setNotifications(notifs);
-          setUnread(notifs.filter(n => !n.is_read).length);
-        })
-        .catch(() => {});
+      loadNotifications(1);
+    } else {
+      setNotifications([]);
+      setUnread(0);
     }
   }, [user]);
 
@@ -44,6 +63,12 @@ export default function Header({ onSearch, onMenu }) {
     await notificationsApi.markRead(id);
     setNotifications(n => n.map(x => x.id === id ? { ...x, is_read: true } : x));
     setUnread(u => Math.max(0, u - 1));
+  };
+
+  const handleLoadMoreNotifications = () => {
+    if (notifPage < notifLastPage && !notifLoading) {
+      loadNotifications(notifPage + 1, true);
+    }
   };
 
   const handleMarkAll = async () => {
@@ -129,6 +154,16 @@ export default function Header({ onSearch, onMenu }) {
                         </p>
                       </div>
                     ))}
+                    {notifPage < notifLastPage && (
+                      <button
+                        className="btn btn-ghost btn-sm w-full"
+                        style={{ margin: '8px 12px', width: 'calc(100% - 24px)' }}
+                        onClick={handleLoadMoreNotifications}
+                        disabled={notifLoading}
+                      >
+                        {notifLoading ? 'Loading…' : 'Load more'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

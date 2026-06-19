@@ -111,9 +111,17 @@ export default function Profile() {
       await authApi.updateProfile(payload);
 
       if (avatarFile) {
-        const fd = new FormData();
-        fd.append('avatar', avatarFile);
-        await authApi.uploadAvatar(fd);
+        try {
+          const fd = new FormData();
+          fd.append('avatar', avatarFile);
+          await authApi.uploadAvatar(fd);
+        } catch {
+          await refreshUser();
+          toast.error('Profile saved, but avatar upload failed. Please try again.');
+          setAvatarFile(null);
+          setLoading(false);
+          return;
+        }
       }
 
       await refreshUser();
@@ -278,6 +286,9 @@ export default function Profile() {
                 value={form.password_confirmation}
                 onChange={e => handleChange('password_confirmation', e.target.value)}
               />
+              {errors.password_confirmation && (
+                <p className="form-error">{errors.password_confirmation}</p>
+              )}
             </div>
 
             <button className="btn btn-primary" onClick={handleSave} disabled={loading}>

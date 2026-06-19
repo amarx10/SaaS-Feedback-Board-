@@ -47,6 +47,15 @@ export default function FeedbackDetail() {
 
   useEffect(() => {
     if (!authLoading) {
+      setLoading(true);
+      setCommentsLoading(true);
+      setFeedback(null);
+      setComments([]);
+      setCommentText('');
+      setReplyParentId(null);
+      setReplyText('');
+      setEditingComment(null);
+      setEditText('');
       loadFeedback();
       loadComments();
     }

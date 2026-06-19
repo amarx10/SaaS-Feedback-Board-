@@ -109,6 +109,7 @@ const loadFeedback = async () => {
     if (newFilters.category_id) params.category_id = newFilters.category_id;
     if (newFilters.status) params.status = newFilters.status;
     if (newFilters.sort && newFilters.sort !== 'most_voted') params.sort = newFilters.sort;
+    if (newFilters.page && newFilters.page > 1) params.page = String(newFilters.page);
     setSearchParams(params);
   };
 
@@ -161,7 +162,7 @@ const loadFeedback = async () => {
             <Pagination
               currentPage={pagination.current_page}
               lastPage={pagination.last_page}
-              onPageChange={(p) => setFilters(f => ({ ...f, page: p }))}
+              onPageChange={(p) => handleFilterChange({ ...filters, page: p })}
             />
           </>
         )}
@@ -195,7 +196,7 @@ const loadFeedback = async () => {
                 );
               })}
             </div>
-            <button className="widget-link" onClick={() => handleFilterChange({ ...filters, status: '' })}>
+            <button className="widget-link" onClick={() => handleFilterChange({ ...filters, status: '', page: 1 })}>
               View all <ExternalLink size={11} />
             </button>
           </div>

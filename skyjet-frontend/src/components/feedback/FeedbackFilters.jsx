@@ -11,16 +11,23 @@ const SORT_OPTIONS = [
 export default function FeedbackFilters({ categories = [], filters, onChange }) {
   const [search, setSearch] = useState(filters.search || '');
   const searchTimer = useRef(null);
+  const filtersRef = useRef(filters);
+
+  filtersRef.current = filters;
+
+  useEffect(() => {
+    setSearch(filters.search || '');
+  }, [filters.search]);
 
   useEffect(() => {
     clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => {
-      if (search !== filters.search) {
-        onChange({ ...filters, search, page: 1 });
+      if (search !== filtersRef.current.search) {
+        onChange({ ...filtersRef.current, search, page: 1 });
       }
     }, 400);
     return () => clearTimeout(searchTimer.current);
-  }, [search]);
+  }, [search, onChange]);
 
   const handleChange = (key, value) => {
     onChange({ ...filters, [key]: value, page: 1 });

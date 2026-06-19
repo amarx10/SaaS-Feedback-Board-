@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { roadmapApi } from '../api/roadmap';
-import { feedbackApi } from '../api/feedback';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatusBadge from '../components/common/StatusBadge';
@@ -19,41 +18,31 @@ const COLUMNS = [
 export default function Roadmap() {
   const navigate = useNavigate();
   const [data, setData] = useState({ columns: {}, counts: {} });
-  const [openItems, setOpenItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
-const loadData = async () => {
-  setLoading(true);
+  const loadData = async () => {
+    setLoading(true);
 
-  try {
-    const [roadmapRes, openRes] = await Promise.all([
-      roadmapApi.get(),
-      feedbackApi.getAll({ status: 'open', sort: 'most_voted', per_page: 20 }),
-    ]);
-
-    const roadmapData = roadmapRes.data.data;
-
-    setData(roadmapData);
-    setOpenItems(openRes.data.data.items || []);
-
-  } catch (error) {
-    toast.error('Failed to load roadmap. Please refresh.');
-    console.error('Roadmap load error:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      const roadmapRes = await roadmapApi.get();
+      setData(roadmapRes.data.data || { columns: {}, counts: {} });
+    } catch (error) {
+      toast.error('Failed to load roadmap. Please refresh.');
+      console.error('Roadmap load error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) return <LoadingSpinner message="Loading roadmap…" />;
 
-  const getItems = (key) => {
-    if (key === 'open') return openItems;
-    return data.columns?.[key] || [];
-  };
+  const getItems = (key) => data.columns?.[key] || [];
+
+  const getCount = (key) => data.counts?.[key] ?? getItems(key).length;
 
   return (
     <div>
@@ -74,7 +63,7 @@ const loadData = async () => {
               <div className="roadmap-col-header">
                 <span className={`roadmap-col-dot ${col.dotClass}`} />
                 <span className="roadmap-col-title">{col.label}</span>
-                <span className="roadmap-col-count">{items.length}</span>
+                <span className="roadmap-col-count">{getCount(col.key)}</span>
               </div>
               <div className="roadmap-col-body">
                 {items.length === 0 ? (

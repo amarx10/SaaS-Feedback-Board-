@@ -30,7 +30,7 @@ Route::get('/feedback/{id}/comments', [CommentController::class, 'index']);
 
 // ── Authenticated Routes ───────────────────────────────────────────────────────
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
     // Auth
     Route::post('/logout',         [AuthController::class, 'logout']);
