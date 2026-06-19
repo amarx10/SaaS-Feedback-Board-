@@ -30,7 +30,7 @@ export default function AdminCategories() {
     try {
       const res = await adminApi.getCategories();
       setCategories(res.data.data || []);
-    } catch {}
+    } catch { toast.error('Failed to load categories. Please refresh.');}
     finally { setLoading(false); }
   };
 

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use App\Http\Requests\StoreCommentRequest;
+use App\Http\Resources\CommentResource;
 use App\Models\Comment;
 use App\Models\Feedback;
 use App\Models\Notification;
@@ -22,18 +24,15 @@ class CommentController extends Controller
 
         return response()->json([
             'success' => true,
-            'data'    => $comments->map(fn ($c) => $this->formatComment($c)),
+            'data'    => CommentResource::collection($comments),
         ]);
     }
 
-    public function store(Request $request, int $feedbackId): JsonResponse
+    public function store(StoreCommentRequest $request, int $feedbackId): JsonResponse
     {
         $feedback = Feedback::findOrFail($feedbackId);
 
-        $validated = $request->validate([
-            'body'      => 'required|string|max:1000',
-            'parent_id' => 'nullable|exists:comments,id',
-        ]);
+        $validated = $request->validated();
 
         $user    = $request->user();
         $comment = Comment::create([
@@ -63,7 +62,7 @@ class CommentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Comment posted.',
-            'data'    => $this->formatComment($comment),
+            'data'    => new CommentResource($comment),
         ], 201);
     }
 
@@ -82,7 +81,7 @@ class CommentController extends Controller
 
         return response()->json([
             'success' => true,
-            'data'    => $this->formatComment($comment),
+            'data'    => new CommentResource($comment),
         ]);
     }
 
@@ -94,28 +93,20 @@ class CommentController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
-        Feedback::find($comment->feedback_id)?->decrement('comments_count');
+        $feedback = Feedback::find($comment->feedback_id);
         $comment->delete();
 
-        return response()->json(['success' => true, 'message' => 'Comment deleted.']);
+        $commentsCount = 0;
+        if ($feedback) {
+            $commentsCount = $feedback->allComments()->count();
+            $feedback->update(['comments_count' => $commentsCount]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Comment deleted.',
+            'data'    => ['comments_count' => $commentsCount],
+        ]);
     }
 
-    private function formatComment(Comment $c): array
-    {
-        return [
-            'id'                => $c->id,
-            'body'              => $c->body,
-            'is_admin_response' => $c->is_admin_response,
-            'created_at'        => $c->created_at->toISOString(),
-            'user' => $c->user ? [
-                'id'         => $c->user->id,
-                'name'       => $c->user->name,
-                'username'   => $c->user->username,
-                'avatar_url' => $c->user->avatar_url,
-                'initials'   => $c->user->initials,
-                'is_admin'   => $c->user->is_admin,
-            ] : null,
-            'replies' => $c->replies ? $c->replies->map(fn ($r) => $this->formatComment($r))->toArray() : [],
-        ];
-    }
 }

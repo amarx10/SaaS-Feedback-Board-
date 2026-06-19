@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use App\Models\Follow;
 use App\Models\Feedback;
+use App\Models\Vote;
 
 class FollowController extends Controller
 {
@@ -39,6 +41,13 @@ class FollowController extends Controller
 
         $user = $request->user();
 
+        // Bulk-load votes BEFORE the map loop to eliminate N+1 queries
+        $feedbackIds = $followed->pluck('id');
+        $userVotes = Vote::where('user_id', $user->id)
+            ->whereIn('feedback_id', $feedbackIds)
+            ->get()
+            ->keyBy('feedback_id');
+
         return response()->json([
             'success' => true,
             'data'    => [
@@ -55,8 +64,8 @@ class FollowController extends Controller
                     'is_following'   => true,
                     'upvotes_count'  => $f->upvotes_count,
                     'downvotes_count'=> $f->downvotes_count,
-                    'user_vote_type' => $f->votes()->where('user_id', $user->id)->value('type'),
-                    'has_voted'      => $f->votes()->where('user_id', $user->id)->exists(),
+                    'user_vote_type' => $userVotes->get($f->id)?->type,
+                    'has_voted'      => $userVotes->has($f->id),
                 ]),
                 'total'        => $followed->total(),
                 'current_page' => $followed->currentPage(),

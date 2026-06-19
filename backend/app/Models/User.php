@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -89,10 +90,9 @@ class User extends Authenticatable
 
     public function getAvatarUrlAttribute(): ?string
     {
-        if ($this->avatar) {
-            return '/storage/' . $this->avatar;
-        }
-        return null;
+        return $this->avatar
+            ? Storage::disk('public')->url($this->avatar)
+            : null;
     }
 
     public function getInitialsAttribute(): string
@@ -107,7 +107,13 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
-        return strtolower($this->username) === 'amar' || strtolower($this->email) === 'amar@gmail.com';
+        // If is_super_admin column exists in DB, use it
+        if (array_key_exists('is_super_admin', $this->getAttributes())) {
+            return (bool) $this->getAttributes()['is_super_admin'];
+        }
+        // Fall back to env-configured username (SUPER_ADMIN_USERNAME in .env)
+        $envUser = strtolower((string) config('auth.super_admin_username', ''));
+        return $envUser !== '' && strtolower($this->username) === $envUser;
     }
 
     public function getIsSuperAdminAttribute(): bool

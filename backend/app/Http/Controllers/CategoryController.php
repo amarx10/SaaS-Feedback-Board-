@@ -51,7 +51,16 @@ class CategoryController extends Controller
     }
     public function destroy(int $id): JsonResponse
     {
-        Category::findOrFail($id)->delete();
+        $category = Category::withCount('feedback')->findOrFail($id);
+
+        if ($category->feedback_count > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => "Cannot delete a category that has {$category->feedback_count} feedback item(s). Please reassign or delete the feedback first.",
+            ], 422);
+        }
+
+        $category->delete();
         return response()->json(['success' => true, 'message' => 'Category deleted.']);
     }
 }

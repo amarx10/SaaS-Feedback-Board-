@@ -13,7 +13,11 @@ class UserResource extends JsonResource
             'id'            => $this->id,
             'name'          => $this->name,
             'username'      => $this->username,
-            'email'         => $this->email,
+            // Only expose email to the user themselves or to admins
+            'email'         => $this->when(
+                $request->user()?->id === $this->id || $request->user()?->is_admin,
+                $this->email
+            ),
             'bio'           => $this->bio,
             'date_of_birth' => $this->date_of_birth?->format('Y-m-d'),
             'avatar_url'    => $this->avatar_url,

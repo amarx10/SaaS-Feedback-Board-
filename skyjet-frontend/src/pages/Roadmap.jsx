@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { roadmapApi } from '../api/roadmap';
+import { feedbackApi } from '../api/feedback';
+import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatusBadge from '../components/common/StatusBadge';
 import Badge from '../components/common/Badge';
@@ -24,20 +26,27 @@ export default function Roadmap() {
     loadData();
   }, []);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      // Roadmap API returns under_review, planned, in_progress, completed
-      const [roadmapRes, openRes] = await Promise.all([
-        roadmapApi.get(),
-        import('../api/feedback').then(m => m.feedbackApi.getAll({ status: 'open', sort: 'most_voted', per_page: 20 })),
-      ]);
-      const roadmapData = roadmapRes.data.data;
-      setData(roadmapData);
-      setOpenItems(openRes.data.data.items || []);
-    } catch {}
-    finally { setLoading(false); }
-  };
+const loadData = async () => {
+  setLoading(true);
+
+  try {
+    const [roadmapRes, openRes] = await Promise.all([
+      roadmapApi.get(),
+      feedbackApi.getAll({ status: 'open', sort: 'most_voted', per_page: 20 }),
+    ]);
+
+    const roadmapData = roadmapRes.data.data;
+
+    setData(roadmapData);
+    setOpenItems(openRes.data.data.items || []);
+
+  } catch (error) {
+    toast.error('Failed to load roadmap. Please refresh.');
+    console.error('Roadmap load error:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (loading) return <LoadingSpinner message="Loading roadmap…" />;
 

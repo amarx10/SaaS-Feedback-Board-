@@ -16,9 +16,20 @@ return [
     */
 
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
+        'guard'     => env('AUTH_GUARD', 'web'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Super Admin Username
+    |--------------------------------------------------------------------------
+    | The username of the super admin account. Used to grant elevated privileges
+    | without hardcoding usernames inside application logic. Set this in your
+    | .env file as SUPER_ADMIN_USERNAME=yourusername
+    |
+    */
+    'super_admin_username' => env('SUPER_ADMIN_USERNAME', ''),
 
     /*
     |--------------------------------------------------------------------------

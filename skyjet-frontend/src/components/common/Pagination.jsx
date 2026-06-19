@@ -2,7 +2,13 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function Pagination({ currentPage, lastPage, onPageChange }) {
   if (lastPage <= 1) return null;
-  const pages = Array.from({ length: Math.min(lastPage, 7) }, (_, i) => i + 1);
+
+  const maxVisible = 7;
+  const half = Math.floor(maxVisible / 2);
+  let start = Math.max(1, currentPage - half);
+  let end = Math.min(lastPage, start + maxVisible - 1);
+  start = Math.max(1, end - maxVisible + 1);
+  const pages = Array.from({ length: end - start + 1 }, (_, i) => start + i);
 
   return (
     <div className="pagination">

@@ -7,7 +7,7 @@ import { Eye, EyeOff } from 'lucide-react';
 const logoSrc = '/images/logo.png';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ login: '', password: '' });
   const [showPw, setShowPw] = useState(false);
@@ -30,6 +30,7 @@ export default function Login() {
     try {
       const user = await login(form);
       toast.success(`Welcome back, ${user.name}!`);
+      await refreshUser(); 
       navigate(user.is_admin ? '/admin' : '/');
     } catch (err) {
       const data = err.response?.data;

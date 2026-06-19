@@ -10,15 +10,22 @@ class NotificationController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $notifications = Notification::where('user_id', $request->user()->id)
+        $userId = $request->user()->id;
+
+        $notifications = Notification::where('user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
+        // Separate COUNT gives an accurate global unread badge (not just the current page)
+        $unreadCount = Notification::where('user_id', $userId)
+            ->where('is_read', false)
+            ->count();
+
         return response()->json([
-            'success'       => true,
-            'data'          => $notifications->items(),
-            'unread_count'  => Notification::where('user_id', $request->user()->id)->where('is_read', false)->count(),
-            'total'         => $notifications->total(),
+            'success'      => true,
+            'data'         => $notifications->items(),
+            'unread_count' => $unreadCount,
+            'total'        => $notifications->total(),
         ]);
     }
 

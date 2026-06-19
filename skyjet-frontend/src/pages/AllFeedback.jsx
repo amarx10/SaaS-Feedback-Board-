@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { feedbackApi } from '../api/feedback';
 import api from '../api/axios';
+import toast from 'react-hot-toast';
 import FeedbackCard from '../components/feedback/FeedbackCard';
 import FeedbackFilters from '../components/feedback/FeedbackFilters';
 import FeedbackForm from '../components/feedback/FeedbackForm';
@@ -53,22 +54,8 @@ export default function AllFeedback() {
 
   useEffect(() => {
     api.get('/categories').then(r => setCategories(r.data.data || []));
-    // Status counts
-    Promise.all([
-      api.get('/feedback', { params: { status: 'open', per_page: 1 } }),
-      api.get('/feedback', { params: { status: 'under_review', per_page: 1 } }),
-      api.get('/feedback', { params: { status: 'planned', per_page: 1 } }),
-      api.get('/feedback', { params: { status: 'in_progress', per_page: 1 } }),
-      api.get('/feedback', { params: { status: 'completed', per_page: 1 } }),
-    ]).then(([o, ur, p, ip, c]) => {
-      setStatusCounts({
-        open: o.data.data?.total || 0,
-        under_review: ur.data.data?.total || 0,
-        planned: p.data.data?.total || 0,
-        in_progress: ip.data.data?.total || 0,
-        completed: c.data.data?.total || 0,
-      });
-    });
+    // Single stats request replaces 5 parallel per-status requests
+    feedbackApi.getStats().then(r => setStatusCounts(r.data.data || {}));
   }, []);
 
   useEffect(() => {
@@ -77,24 +64,42 @@ export default function AllFeedback() {
     }
   }, [filters, authLoading, user]);
 
-  const loadFeedback = async () => {
-    setLoading(true);
-    try {
-      const params = {};
-      if (filters.search) params.search = filters.search;
-      if (filters.category_id) params.category_id = filters.category_id;
-      if (filters.status) params.status = filters.status;
-      if (filters.sort) params.sort = filters.sort;
-      params.page = filters.page;
+const loadFeedback = async () => {
+  setLoading(true);
 
-      const res = await feedbackApi.getAll(params);
-      const d = res.data.data;
-      setFeedback(d.items || []);
-      setPagination({ total: d.total, current_page: d.current_page, last_page: d.last_page });
-    } catch {
-    } finally {
-      setLoading(false);
-    }
+  try {
+    const params = {};
+
+    if (filters.search) params.search = filters.search;
+    if (filters.category_id) params.category_id = filters.category_id;
+    if (filters.status) params.status = filters.status;
+    if (filters.sort) params.sort = filters.sort;
+
+    params.page = filters.page;
+
+    const res = await feedbackApi.getAll(params);
+    const d = res.data.data;
+
+    setFeedback(d.items || []);
+    setPagination({
+      total: d.total,
+      current_page: d.current_page,
+      last_page: d.last_page,
+    });
+
+  } catch (error) {
+    toast.error('Failed to load feedback. Please try again.');
+    console.error('AllFeedback load error:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // Update vote counts in local state without a full re-fetch
+  const handleVote = (updatedFeedback) => {
+    setFeedback(prev => prev.map(f =>
+      f.id === updatedFeedback.id ? { ...f, ...updatedFeedback } : f
+    ));
   };
 
   const handleFilterChange = (newFilters) => {
@@ -149,7 +154,7 @@ export default function AllFeedback() {
                 <FeedbackCard
                   key={f.id}
                   feedback={f}
-                  onVote={() => {}}
+                  onVote={handleVote}
                 />
               ))}
             </div>

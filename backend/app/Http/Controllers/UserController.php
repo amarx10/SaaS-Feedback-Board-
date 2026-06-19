@@ -4,14 +4,16 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
+use App\Http\Resources\UserResource;
 
 class UserController extends Controller
 {
     public function updateProfile(Request $request): JsonResponse
     {
-        $user      = $request->user();
+        $user = $request->user();
+
         $validated = $request->validate([
             'name'          => 'sometimes|string|max:100',
             'bio'           => 'nullable|string|max:500',
@@ -21,15 +23,36 @@ class UserController extends Controller
                 'before_or_equal:' . now()->subYears(16)->format('Y-m-d'),
                 'after_or_equal:' . now()->subYears(100)->format('Y-m-d'),
             ],
-            'password'      => 'nullable|string|min:8|confirmed',
+
+            // password update protection
+            'current_password' => 'required_with:password|string',
+            'password'         => 'nullable|string|min:8|confirmed',
         ], [
             'date_of_birth.before_or_equal' => 'You must be at least 16 years old.',
             'date_of_birth.after_or_equal'  => 'Date of birth must be within the last 100 years.',
         ]);
 
+        /**
+         * Handle password update securely
+         */
         if (isset($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
+
+            if (!Hash::check($validated['current_password'], $user->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The current password is incorrect.',
+                    'errors'  => [
+                        'current_password' => ['The current password is incorrect.']
+                    ],
+                ], 422);
+            }
+
+            // remove current_password before update
+            unset($validated['current_password']);
+
         } else {
+            // prevent accidental update payload pollution
+            unset($validated['current_password']);
             unset($validated['password']);
         }
 
@@ -38,17 +61,7 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Profile updated.',
-            'data'    => [
-                'id'            => $user->id,
-                'name'          => $user->name,
-                'username'      => $user->username,
-                'email'         => $user->email,
-                'bio'           => $user->bio,
-                'date_of_birth' => $user->date_of_birth?->format('Y-m-d'),
-                'avatar_url'    => $user->avatar_url,
-                'initials'      => $user->initials,
-                'is_admin'      => $user->is_admin,
-            ],
+            'data'    => new UserResource($user->fresh()),
         ]);
     }
 

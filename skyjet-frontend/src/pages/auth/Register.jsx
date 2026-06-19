@@ -76,28 +76,33 @@ export default function Register() {
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     setLoading(true);
-    try {
-      const user = await register(form);
-      if (avatarFile) {
-        const fd = new FormData();
-        fd.append('avatar', avatarFile);
-        await authApi.uploadAvatar(fd);
-        await refreshUser();
-      }
-      toast.success(`Welcome, ${user.name}!`);
-      navigate('/');
-    } catch (err) {
-      const data = err.response?.data;
-      if (data?.errors) {
-        const mapped = {};
-        Object.entries(data.errors).forEach(([k, v]) => { mapped[k] = Array.isArray(v) ? v[0] : v; });
-        setErrors(mapped);
-      } else {
-        toast.error(data?.message || 'Registration failed');
-      }
-    } finally {
-      setLoading(false);
-    }
+   try {
+  const user = await register(form);
+
+  if (avatarFile) {
+    const fd = new FormData();
+    fd.append('avatar', avatarFile);
+    await authApi.uploadAvatar(fd);
+  }
+  await refreshUser();
+  toast.success(`Welcome, ${user.name}!`);
+  navigate('/');
+} catch (err) {
+  const data = err.response?.data;
+
+  if (data?.errors) {
+    const mapped = {};
+    Object.entries(data.errors).forEach(([k, v]) => {
+      mapped[k] = Array.isArray(v) ? v[0] : v;
+    });
+    setErrors(mapped);
+  } else {
+    toast.error(data?.message || 'Registration failed');
+  }
+
+} finally {
+  setLoading(false);
+}
   };
 
   return (

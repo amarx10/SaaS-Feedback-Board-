@@ -14,13 +14,17 @@ use App\Http\Controllers\AdminController;
 
 // ── Public Routes ─────────────────────────────────────────────────────────────
 
-Route::post('/register',       [AuthController::class, 'register']);
-Route::post('/login',          [AuthController::class, 'login']);
+// Rate-limit auth endpoints: 10 attempts per minute per IP
+Route::middleware('throttle:10,1')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login',    [AuthController::class, 'login']);
+});
 Route::get('/categories',      [CategoryController::class, 'index']);
 Route::get('/roadmap',         [RoadmapController::class, 'index']);
 
 // Public feedback browsing (read-only)
 Route::get('/feedback',        [FeedbackController::class, 'index']);
+Route::get('/feedback/stats',  [FeedbackController::class, 'stats']);
 Route::get('/feedback/{id}',   [FeedbackController::class, 'show']);
 Route::get('/feedback/{id}/comments', [CommentController::class, 'index']);
 

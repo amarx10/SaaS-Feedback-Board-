@@ -5,10 +5,16 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+use App\Http\Requests\StoreFeedbackRequest;
+use App\Http\Resources\FeedbackResource;
 use App\Models\Feedback;
 use App\Models\Category;
+use App\Models\Follow;
 use App\Models\Notification;
+use App\Models\Vote;
 
 class FeedbackController extends Controller
 {
@@ -40,37 +46,52 @@ class FeedbackController extends Controller
 
         // Sort
 $sort = $request->get('sort', 'most_voted');
-$hasViews = Schema::hasColumn('feedback', 'views_count');
+
+$query->orderBy('is_pinned', 'desc');
+
 match ($sort) {
     'newest'     => $query->orderBy('created_at', 'desc'),
     'oldest'     => $query->orderBy('created_at', 'asc'),
     'most_voted' => $query->orderBy('votes_count', 'desc'),
-    'trending'   => $hasViews
-                        ? $query->trending()
-                        : $query->orderByRaw('
-                            ((GREATEST(COALESCE(upvotes_count,0) - (COALESCE(downvotes_count,0) * 1.5), 0)
-                              / (TIMESTAMPDIFF(SECOND, created_at, NOW())/3600 + 2) * 10
-                              + COALESCE(comments_count,0) * 3)
-                             / POW(TIMESTAMPDIFF(SECOND, created_at, NOW())/3600 + 2, 0.8)) DESC
-                        '),
+    'trending'   => $query->trending(),
     default      => $query->orderBy('votes_count', 'desc'),
 };
-
-        // Pin first
-        $query->orderBy('is_pinned', 'desc');
 
         $feedback = $query->paginate($request->get('per_page', 15));
 
         $user = Auth::guard('sanctum')->user();
 
+        // Bulk-load votes and follows for the current user to eliminate N+1 queries
+        $feedbackIds = $feedback->pluck('id');
+        $userVotes   = [];
+        $userFollows = [];
+
+        if ($user) {
+            $userVotes = Vote::where('user_id', $user->id)
+                ->whereIn('feedback_id', $feedbackIds)
+                ->get()
+                ->keyBy('feedback_id');
+
+            $userFollows = Follow::where('user_id', $user->id)
+                ->whereIn('feedback_id', $feedbackIds)
+                ->pluck('feedback_id')
+                ->flip()
+                ->toArray();
+        }
+
+        // Inject bulk data into request attributes so FeedbackResource can
+        // do O(1) lookups without firing per-item queries.
+        request()->attributes->set('userVotes', $userVotes);
+        request()->attributes->set('userFollows', $userFollows);
+
         return response()->json([
             'success' => true,
             'data'    => [
-                'items'       => $feedback->map(fn ($f) => $this->formatFeedback($f, $user)),
-                'total'       => $feedback->total(),
-                'per_page'    => $feedback->perPage(),
-                'current_page'=> $feedback->currentPage(),
-                'last_page'   => $feedback->lastPage(),
+                'items'        => FeedbackResource::collection($feedback)->toArray(request()),
+                'total'        => $feedback->total(),
+                'per_page'     => $feedback->perPage(),
+                'current_page' => $feedback->currentPage(),
+                'last_page'    => $feedback->lastPage(),
             ],
         ]);
     }
@@ -85,26 +106,21 @@ match ($sort) {
         try {
             $feedback->increment('views_count');
         } catch (\Exception $e) {
-            // ignore increment failures to avoid breaking the endpoint
+            Log::warning('Failed to increment views for feedback ID ' . $feedback->id . ': ' . $e->getMessage());
         }
-        $user     = Auth::guard('sanctum')->user();
 
         return response()->json([
             'success' => true,
-            'data'    => $this->formatFeedback($feedback, $user, true),
+            'data'    => new FeedbackResource($feedback),
         ]);
     }
 
     /**
      * Create new feedback.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreFeedbackRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'title'       => 'required|string|max:200',
-            'description' => 'required|string|max:2000',
-            'category_id' => 'required|exists:categories,id',
-        ]);
+        $validated = $request->validated();
 
         $feedback = Feedback::create([
             'user_id'     => $request->user()->id,
@@ -114,15 +130,15 @@ match ($sort) {
             'status'      => 'open',
         ]);
 
-        // Update category count
-        Category::find($validated['category_id'])->increment('feedback_count');
-
+        // Update category count (null-safe in case of race condition with category deletion)
+        Category::find($validated['category_id'])?->increment('feedback_count');
+        Cache::forget('admin_stats');
         $feedback->load(['user', 'category']);
 
         return response()->json([
             'success' => true,
             'message' => 'Feedback submitted successfully.',
-            'data'    => $this->formatFeedback($feedback, $request->user()),
+            'data'    => new FeedbackResource($feedback),
         ], 201);
     }
 
@@ -144,13 +160,27 @@ match ($sort) {
             'category_id' => 'sometimes|exists:categories,id',
         ]);
 
-        $feedback->update($validated);
-        $feedback->load(['user', 'category']);
+        
+        // Capture old category before the update so we can adjust counts
+$oldCategoryId = $feedback->category_id;
+
+DB::transaction(function () use ($feedback, $validated, $oldCategoryId) {
+    $feedback->update($validated);
+
+    if (isset($validated['category_id']) && $validated['category_id'] != $oldCategoryId) {
+        Category::find($oldCategoryId)?->decrement('feedback_count');
+        Category::find($validated['category_id'])?->increment('feedback_count');
+    }
+});
+
+Cache::forget('admin_stats');
+
+$feedback->load(['user', 'category']);
 
         return response()->json([
             'success' => true,
             'message' => 'Feedback updated.',
-            'data'    => $this->formatFeedback($feedback, $user),
+            'data'    => new FeedbackResource($feedback),
         ]);
     }
 
@@ -168,6 +198,7 @@ match ($sort) {
 
         Category::find($feedback->category_id)?->decrement('feedback_count');
         $feedback->delete();
+        Cache::forget('admin_stats');       
 
         return response()->json([
             'success' => true,
@@ -178,64 +209,62 @@ match ($sort) {
     /**
      * My submitted feedback.
      */
-    public function myFeedback(Request $request): JsonResponse
-    {
-        $feedback = Feedback::with(['user', 'category'])
-            ->where('user_id', $request->user()->id)
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
+   public function myFeedback(Request $request): JsonResponse
+{
+    $user = $request->user();
 
-        $user = $request->user();
+    $feedback = Feedback::with(['user', 'category'])
+        ->where('user_id', $user->id)
+        ->orderBy('created_at', 'desc')
+        ->paginate(15);
+
+    $feedbackIds = $feedback->pluck('id');
+
+    $userVotes = Vote::where('user_id', $user->id)
+        ->whereIn('feedback_id', $feedbackIds)
+        ->get()
+        ->keyBy('feedback_id');
+
+    $userFollows = Follow::where('user_id', $user->id)
+        ->whereIn('feedback_id', $feedbackIds)
+        ->pluck('feedback_id')
+        ->flip()
+        ->toArray();
+
+    request()->attributes->set('userVotes', $userVotes);
+    request()->attributes->set('userFollows', $userFollows);
+
+    return response()->json([
+        'success' => true,
+        'data'    => [
+            'items'        => FeedbackResource::collection($feedback)->toArray(request()),
+            'total'        => $feedback->total(),
+            'current_page' => $feedback->currentPage(),
+            'last_page'    => $feedback->lastPage(),
+        ],
+    ]);
+}
+
+    /**
+     * Public stats endpoint — returns status counts in a single DB query.
+     * Replaces the 5 parallel per-status requests made by the frontend.
+     */
+    public function stats(): JsonResponse
+    {
+        $counts = Feedback::selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $statuses = ['open', 'under_review', 'planned', 'in_progress', 'completed', 'closed'];
+
+        $result = [];
+        foreach ($statuses as $status) {
+            $result[$status] = (int) ($counts[$status] ?? 0);
+        }
 
         return response()->json([
             'success' => true,
-            'data'    => [
-                'items'       => $feedback->map(fn ($f) => $this->formatFeedback($f, $user)),
-                'total'       => $feedback->total(),
-                'current_page'=> $feedback->currentPage(),
-                'last_page'   => $feedback->lastPage(),
-            ],
+            'data'    => $result,
         ]);
-    }
-
-    private function formatFeedback(Feedback $f, $user = null, bool $detail = false): array
-    {
-        $vote = $user ? $f->votes()->where('user_id', $user->id)->first() : null;
-
-        $data = [
-            'id'             => $f->id,
-            'title'          => $f->title,
-            'description'    => $f->description,
-            'status'         => $f->status,
-            'votes_count'    => $f->votes_count,
-            'upvotes_count'  => $f->upvotes_count,
-            'downvotes_count'=> $f->downvotes_count,
-            'comments_count' => $f->comments_count,
-            'is_pinned'      => $f->is_pinned,
-            'admin_response' => $f->admin_response,
-            'created_at'     => $f->created_at->toISOString(),
-            'updated_at'     => $f->updated_at->toISOString(),
-            'user'           => $f->user ? [
-                'id'         => $f->user->id,
-                'name'       => $f->user->name,
-                'username'   => $f->user->username,
-                'avatar_url' => $f->user->avatar_url,
-                'initials'   => $f->user->initials,
-            ] : null,
-            'category'       => $f->category ? [
-                'id'    => $f->category->id,
-                'name'  => $f->category->name,
-                'slug'  => $f->category->slug,
-                'color' => $f->category->color,
-            ] : null,
-            'has_voted'      => (bool) $vote,
-            'user_vote_type' => $vote?->type,
-            'is_following'   => $user ? $f->follows()->where('user_id', $user->id)->exists() : false,
-            'is_owner'       => $user ? $f->user_id === $user->id : false,
-            'views_count'    => $f->views_count ?? 0,
-            'trending_score' => isset($f->trending_score) ? (float) $f->trending_score : null,
-        ];
-
-        return $data;
     }
 }

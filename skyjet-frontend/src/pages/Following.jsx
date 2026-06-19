@@ -5,6 +5,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import EmptyState from '../components/common/EmptyState';
 import Pagination from '../components/common/Pagination';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 export default function Following() {
   const navigate = useNavigate();
@@ -13,22 +14,39 @@ export default function Following() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
-  useEffect(() => { load(); }, [page]);
+  useEffect(() => {
+    load();
+  }, [page]);
 
   const load = async () => {
     setLoading(true);
+
     try {
       const res = await api.get('/following', { params: { page } });
       const d = res.data.data;
-      setFeedback(d.items || []);
-      setPagination({ current_page: d.current_page, last_page: d.last_page });
-    } catch {}
-    finally { setLoading(false); }
-  };
 
-  const handleVoteUpdate = (id, update) => {
-    setFeedback(items => items.map(item => item.id === id ? { ...item, ...update } : item));
+      setFeedback(d.items || []);
+      setPagination({
+        current_page: d.current_page,
+        last_page: d.last_page
+      });
+
+    } catch (error) {
+      toast.error('Failed to load. Please try refreshing.');
+      console.error('Following load error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
+const handleVote = (updatedFeedback) => {
+  setFeedback(prev =>
+    prev.map(f =>
+      f.id === updatedFeedback.id
+        ? { ...f, ...updatedFeedback }
+        : f
+    )
+  );
+};
 
   return (
     <div>
@@ -36,7 +54,9 @@ export default function Following() {
         <div className="page-header-row">
           <div>
             <h1 className="page-title">Following</h1>
-            <p className="page-subtitle">Feedback you're tracking for updates.</p>
+            <p className="page-subtitle">
+              Feedback you're tracking for updates.
+            </p>
           </div>
         </div>
       </div>
@@ -48,7 +68,10 @@ export default function Following() {
           title="Not following anything yet"
           description="Follow feedback items to get notified when they're updated."
           action={
-            <button className="btn btn-primary" onClick={() => navigate('/feedback')}>
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate('/feedback')}
+            >
               Browse Feedback
             </button>
           }
@@ -60,10 +83,11 @@ export default function Following() {
               <FeedbackCard
                 key={f.id}
                 feedback={f}
-                onVote={(update) => handleVoteUpdate(f.id, update)}
+                onVote={handleVote}
               />
             ))}
           </div>
+
           <Pagination
             currentPage={pagination.current_page}
             lastPage={pagination.last_page}
