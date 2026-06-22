@@ -9,7 +9,7 @@ class FeedbackResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $user = $request->user();
+        $user = $request->user('sanctum');
         $vote = $this->resolveVote($user, $request);
 
         return [
