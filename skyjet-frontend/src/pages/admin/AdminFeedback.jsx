@@ -9,7 +9,6 @@ import Modal from '../../components/common/Modal';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { Search, Trash2, Pin, PinOff, Edit2 } from 'lucide-react';
-
 const STATUS_OPTIONS = ['open','under_review','planned','in_progress','completed','closed'];
 
 const formatStatusLabel = (status) =>
@@ -108,8 +107,8 @@ export default function AdminFeedback() {
   };
 
   return (
-    <div>
-      <div className="page-header">
+    <div className="page-content">
+        <div className="page-header">
         <div className="page-header-row">
           <div>
             <h1 className="page-title">Manage Feedback</h1>
@@ -163,7 +162,7 @@ export default function AdminFeedback() {
                 <th>Status</th>
                 <th>Votes</th>
                 <th>Comments</th>
-                <th>Submitted by</th>
+                <th>Posted by</th>
                 <th>Date</th>
                 <th style={{ width: 120 }}>Actions</th>
               </tr>

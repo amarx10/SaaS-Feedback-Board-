@@ -6,6 +6,7 @@ import EmptyState from '../components/common/EmptyState';
 import Pagination from '../components/common/Pagination';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import FeedbackSidebar from '../components/feedback/FeedbackSidebar';
 
 export default function Following() {
   const navigate = useNavigate();
@@ -49,8 +50,9 @@ const handleVote = (updatedFeedback) => {
 };
 
   return (
-    <div>
-      <div className="page-header">
+    <div className="two-col-layout">
+      <div className="two-col-main">
+        <div className="page-header">
         <div className="page-header-row">
           <div>
             <h1 className="page-title">Following</h1>
@@ -95,6 +97,9 @@ const handleVote = (updatedFeedback) => {
           />
         </>
       )}
+      </div>
+
+      <FeedbackSidebar />
     </div>
   );
 }

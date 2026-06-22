@@ -8,7 +8,6 @@ import Modal from '../../components/common/Modal';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { Search, ShieldCheck, ShieldOff, UserCheck, UserX, Bell } from 'lucide-react';
-
 export default function AdminUsers() {
   const { user } = useAuth();
 
@@ -135,8 +134,8 @@ const handleSendNotif = async () => {
 };
 
   return (
-    <div>
-      <div className="page-header">
+    <div className="page-content">
+        <div className="page-header">
         <div className="page-header-row">
           <div>
             <h1 className="page-title">Manage Users</h1>

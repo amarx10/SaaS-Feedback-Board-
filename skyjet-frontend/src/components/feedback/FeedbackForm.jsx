@@ -50,7 +50,7 @@ export default function FeedbackForm({ open, onClose, onSuccess, existing }) {
         toast.success('Feedback updated!');
       } else {
         await feedbackApi.create(form);
-        toast.success('Feedback submitted!');
+        toast.success('Feedback posted!');
       }
       onSuccess?.();
       onClose();
@@ -67,13 +67,13 @@ export default function FeedbackForm({ open, onClose, onSuccess, existing }) {
     <Modal
       open={open}
       onClose={onClose}
-      title={existing ? 'Edit Feedback' : 'Submit Feedback'}
+      title={existing ? 'Edit Feedback' : 'Post Feedback'}
       subtitle="Share your ideas, report bugs, or suggest improvements."
       footer={
         <>
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
           <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Saving…' : existing ? 'Update' : 'Submit'}
+            {loading ? 'Saving…' : existing ? 'Update' : 'Post'}
           </button>
         </>
       }

@@ -120,7 +120,7 @@ export default function Sidebar({ categories = [], statusCounts = {}, open = fal
           ) : (
             <button className="sidebar-submit-btn" onClick={() => navigate('/login')}>
               <Plus size={15} />
-              Submit Feedback
+              Post Feedback
             </button>
           )}
           {!user && (

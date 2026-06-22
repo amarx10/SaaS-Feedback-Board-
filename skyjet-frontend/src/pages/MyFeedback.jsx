@@ -6,7 +6,8 @@ import Pagination from '../components/common/Pagination';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import EmptyState from '../components/common/EmptyState';
 import { Plus } from 'lucide-react';
-import toast from 'react-hot-toast'; // ✅ FIX: added import
+import toast from 'react-hot-toast';
+import FeedbackSidebar from '../components/feedback/FeedbackSidebar';
 
 export default function MyFeedback() {
   const [feedback, setFeedback] = useState([]);
@@ -60,13 +61,14 @@ export default function MyFeedback() {
   };
 
   return (
-    <div>
-      <div className="page-header">
+    <div className="two-col-layout">
+      <div className="two-col-main">
+        <div className="page-header">
         <div className="page-header-row">
           <div>
             <h1 className="page-title">My Feedback</h1>
             <p className="page-subtitle">
-              Feedback you've submitted to the community.
+              Feedback you've posted to the community.
             </p>
           </div>
 
@@ -74,7 +76,7 @@ export default function MyFeedback() {
             className="btn btn-primary"
             onClick={() => setShowForm(true)}
           >
-            <Plus size={15} /> Submit New
+            <Plus size={15} /> Post New
           </button>
         </div>
       </div>
@@ -83,14 +85,14 @@ export default function MyFeedback() {
         <LoadingSpinner />
       ) : feedback.length === 0 ? (
         <EmptyState
-          title="No feedback submitted yet"
+          title="No feedback posted yet"
           description="Share your ideas, report bugs, or suggest improvements."
           action={
             <button
               className="btn btn-primary"
               onClick={() => setShowForm(true)}
             >
-              <Plus size={14} /> Submit Your First Feedback
+              <Plus size={14} /> Post Your First Feedback
             </button>
           }
         />
@@ -114,12 +116,15 @@ export default function MyFeedback() {
         </>
       )}
 
-      <FeedbackForm
-        open={showForm}
-        onClose={() => setShowForm(false)}
-        onSuccess={handleCreateSuccess}
-        existing={null}
-      />
+        <FeedbackForm
+          open={showForm}
+          onClose={() => setShowForm(false)}
+          onSuccess={handleCreateSuccess}
+          existing={null}
+        />
+      </div>
+      
+      <FeedbackSidebar />
     </div>
   );
 }

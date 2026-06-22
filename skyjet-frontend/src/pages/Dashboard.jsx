@@ -109,8 +109,8 @@ export default function Dashboard() {
         <div className="dashboard-top-panel dashboard-status-panel">
           <div className="dashboard-panel-header">
             <span className="dashboard-panel-title">Feedback Status</span>
-            <button className="widget-link" onClick={() => navigate('/roadmap')}>
-              View roadmap <ExternalLink size={11} />
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/roadmap')}>
+              View roadmap <ExternalLink size={12} />
             </button>
           </div>
 
@@ -127,16 +127,18 @@ export default function Dashboard() {
                 const pct = total ? Math.round((count / total) * 100) : 0;
 
                 return (
-                  <div key={key} className="status-list-item">
-                    <span className={`status-dot status-dot-${key}`} />
-                    <span className="status-label">{label}</span>
-                    <div className="status-bar-wrap">
+                  <div key={key} className="status-list-item" style={{ padding: '8px 0', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ flexShrink: 0, width: '100px' }}>
+                      <span className={`status-dot status-dot-${key}`} style={{ marginRight: '6px' }} />
+                      <span className="status-label" style={{ fontSize: '13px', fontWeight: '600' }}>{label}</span>
+                    </div>
+                    <div className="status-bar-wrap" style={{ flex: 1, height: '6px', background: 'var(--surface-2)', borderRadius: '10px', overflow: 'hidden' }}>
                       <div
                         className={`status-bar-fill status-bar-${key}`}
-                        style={{ width: `${pct}%` }}
+                        style={{ width: `${pct}%`, height: '100%', borderRadius: '10px' }}
                       />
                     </div>
-                    <span className="status-count">{count}</span>
+                    <span className="status-count" style={{ fontWeight: '700', fontSize: '14px', width: '24px', textAlign: 'right' }}>{count}</span>
                   </div>
                 );
               })}
@@ -159,15 +161,16 @@ export default function Dashboard() {
                     key={f.id}
                     className="activity-item"
                     onClick={() => navigate(`/feedback/${f.id}`)}
+                    style={{ padding: '12px', background: 'var(--surface-2)', borderRadius: '12px', marginBottom: '8px', cursor: 'pointer', display: 'flex', gap: '12px' }}
                   >
-                    <span className={`status-dot status-dot-${f.status}`} />
-                    <div>
-                      <p className="activity-item-title">{f.title}</p>
-                      <p className="activity-item-time">
-                        {f.votes_count} votes ·{' '}
-                        {formatDistanceToNow(new Date(f.created_at), {
-                          addSuffix: true,
-                        })}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', borderRadius: '8px', padding: '6px 10px', flexShrink: 0, border: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--primary)' }}>{f.votes_count}</span>
+                      <span style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-light)', fontWeight: '700' }}>Votes</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <p className="activity-item-title" style={{ fontWeight: '700', fontSize: '14px', margin: 0 }}>{f.title}</p>
+                      <p className="activity-item-time" style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
+                        {formatDistanceToNow(new Date(f.created_at), { addSuffix: true })}
                       </p>
                     </div>
                   </div>

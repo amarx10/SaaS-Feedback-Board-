@@ -178,18 +178,18 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="tabs">
-        <button onClick={() => setTab('profile')} className={tab === 'profile' ? 'active' : ''}>
+      <div className="profile-tabs">
+        <button onClick={() => setTab('profile')} className={`profile-tab ${tab === 'profile' ? 'active' : ''}`}>
           Profile Info
         </button>
-        <button onClick={() => setTab('security')} className={tab === 'security' ? 'active' : ''}>
+        <button onClick={() => setTab('security')} className={`profile-tab ${tab === 'security' ? 'active' : ''}`}>
           Password
         </button>
       </div>
 
      {/* PROFILE TAB */}
 {tab === 'profile' && (
-  <div className="card">
+  <div className="profile-card">
     <div className="card-body">
 
       <div className="form-group">
@@ -250,7 +250,7 @@ export default function Profile() {
 )}
       {/* SECURITY TAB */}
       {tab === 'security' && (
-        <div className="card">
+        <div className="profile-card">
           <div className="card-body">
 
           

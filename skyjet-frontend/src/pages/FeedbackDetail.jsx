@@ -541,7 +541,7 @@ export default function FeedbackDetail() {
           <div className="detail-card">
             <div className="widget-body" style={{ padding: 12 }}>
               <button
-                className={`btn w-full ${feedback.is_following ? 'btn-secondary' : 'btn-ghost'}`}
+                className={`btn w-full ${feedback.is_following ? 'btn-following' : 'btn-ghost'}`}
                 onClick={handleFollow}
                 disabled={followLoading}
               >

@@ -4,7 +4,6 @@ import Modal from '../../components/common/Modal';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
-
 const PRESET_COLORS = [
   '#2563EB','#7C3AED','#059669','#D97706','#EF4444',
   '#EC4899','#0EA5E9','#F97316','#6366F1','#14B8A6',
@@ -99,8 +98,8 @@ export default function AdminCategories() {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div style={{ maxWidth: 700 }}>
-      <div className="page-header">
+    <div className="page-content">
+        <div className="page-header">
         <div className="page-header-row">
           <div>
             <h1 className="page-title">Categories</h1>

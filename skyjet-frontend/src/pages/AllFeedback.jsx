@@ -13,6 +13,7 @@ import StatusBadge from '../components/common/StatusBadge';
 import { useAuth } from '../context/AuthContext';
 import { Plus, ExternalLink } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import FeedbackSidebar from '../components/feedback/FeedbackSidebar';
 
 export default function AllFeedback() {
   const { user, loading: authLoading } = useAuth();
@@ -128,7 +129,7 @@ const loadFeedback = async () => {
             {user && (
               <button className="btn btn-primary" onClick={() => setShowForm(true)}>
                 <Plus size={15} />
-                Submit
+                Post
               </button>
             )}
           </div>
@@ -145,8 +146,8 @@ const loadFeedback = async () => {
         ) : feedback.length === 0 ? (
           <EmptyState
             title="No feedback found"
-            description="Try changing the filters or be the first to submit feedback."
-            action={user ? <button className="btn btn-primary" onClick={() => setShowForm(true)}><Plus size={14} /> Submit Feedback</button> : null}
+            description="Try changing the filters or be the first to post feedback."
+            action={user ? <button className="btn btn-primary" onClick={() => setShowForm(true)}><Plus size={14} /> Post Feedback</button> : null}
           />
         ) : (
           <>
@@ -168,85 +169,7 @@ const loadFeedback = async () => {
         )}
       </div>
 
-      {/* Aside */}
-      <div className="two-col-aside">
-        {/* Feedback Status Widget */}
-        <div className="widget">
-          <div className="widget-header">Feedback Status</div>
-          <div className="widget-body">
-            <div className="status-list">
-              {[
-                { key: 'open', label: 'Open' },
-                { key: 'under_review', label: 'Under Review' },
-                { key: 'planned', label: 'Planned' },
-                { key: 'in_progress', label: 'In Progress' },
-                { key: 'completed', label: 'Completed' },
-              ].map(({ key, label }) => {
-                const count = statusCounts[key] || 0;
-                const pct = totalItems ? Math.round((count / totalItems) * 100) : 0;
-                return (
-                  <div key={key} className="status-list-item">
-                    <span className={`status-dot status-dot-${key}`} />
-                    <span style={{ fontSize: 12, minWidth: 72 }}>{label}</span>
-                    <div className="status-bar-wrap">
-                      <div className={`status-bar-fill status-bar-${key}`} style={{ width: `${pct}%` }} />
-                    </div>
-                    <span className="status-count">{count}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <button className="widget-link" onClick={() => handleFilterChange({ ...filters, status: '', page: 1 })}>
-              View all <ExternalLink size={11} />
-            </button>
-          </div>
-        </div>
-
-        {/* Top Categories Widget */}
-        <div className="widget">
-          <div className="widget-header">Top Categories</div>
-          <div className="widget-body">
-            <div className="category-chip-list">
-              {categories.map(cat => (
-                <div
-                  key={cat.id}
-                  className="category-chip"
-                  onClick={() => handleFilterChange({ ...filters, category_id: String(cat.id), page: 1 })}
-                >
-                  <span className="category-dot" style={{ background: cat.color || '#2563EB' }} />
-                  <span style={{ fontSize: 12 }}>{cat.name}</span>
-                  <span className="category-chip-count">{cat.feedback_count || 0}</span>
-                </div>
-              ))}
-            </div>
-            <button className="widget-link" onClick={() => handleFilterChange({ ...filters, category_id: '', page: 1 })}>
-              View all categories <ExternalLink size={11} />
-            </button>
-          </div>
-        </div>
-
-        {/* Recently Updated */}
-        {feedback.length > 0 && (
-          <div className="widget">
-            <div className="widget-header">Recently Updated</div>
-            <div className="widget-body" style={{ padding: '8px 16px' }}>
-              <div className="activity-feed">
-                {feedback.slice(0, 5).map(f => (
-                  <div key={f.id} className="activity-item">
-                    <span className={`status-dot status-dot-${f.status}`} style={{ marginTop: 4, flexShrink: 0 }} />
-                    <div>
-                      <p className="activity-item-title">{f.title}</p>
-                      <p className="activity-item-time">
-                        {formatDistanceToNow(new Date(f.updated_at || f.created_at), { addSuffix: true })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      <FeedbackSidebar filters={filters} onFilterChange={handleFilterChange} />
 
       <FeedbackForm open={showForm} onClose={() => setShowForm(false)} onSuccess={loadFeedback} />
     </div>

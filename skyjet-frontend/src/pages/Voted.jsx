@@ -6,6 +6,7 @@ import EmptyState from '../components/common/EmptyState';
 import Pagination from '../components/common/Pagination';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import FeedbackSidebar from '../components/feedback/FeedbackSidebar';
 
 export default function Voted() {
   const navigate = useNavigate();
@@ -63,8 +64,9 @@ export default function Voted() {
   };
 
   return (
-    <div>
-      <div className="page-header">
+    <div className="two-col-layout">
+      <div className="two-col-main">
+        <div className="page-header">
         <div className="page-header-row">
           <div>
             <h1 className="page-title">Voted</h1>
@@ -108,6 +110,9 @@ export default function Voted() {
           />
         </>
       )}
+      </div>
+
+      <FeedbackSidebar />
     </div>
   );
 }

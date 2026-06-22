@@ -16,8 +16,9 @@ export default function CategoryDonutChart({ categories = [], compact = false })
       pie: {
         startAngle: -90,
         endAngle: 270,
+        expandOnClick: false,
         donut: {
-          size: '65%',
+          size: '70%',
         },
       },
     },
@@ -151,8 +152,8 @@ export default function CategoryDonutChart({ categories = [], compact = false })
     <div className="category-donut-chart">
       {seriesData.length > 0 ? (
         <>
-          <div className="category-chart-top">
-            <ReactApexChart options={options} series={seriesData} type="donut" width="100%" height={compact ? 180 : 280} />
+          <div className="category-chart-top" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <ReactApexChart options={options} series={seriesData} type="donut" width="100%" height={compact ? 240 : 300} />
           </div>
           {!compact && (
             <div className="category-chart-details">
